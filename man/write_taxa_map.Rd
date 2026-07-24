@@ -2,36 +2,94 @@
 % Please edit documentation in R/write_taxa_map.R
 \name{write_taxa_map}
 \alias{write_taxa_map}
-\title{Write a taxa map by joining input taxa with ITIS data}
+\title{Write an ITIS taxa map}
 \usage{
-write_taxa_map(taxa_df, taxa_col)
+write_taxa_map(taxa_df, taxa_col, match_by = "scientific", path = ".")
 }
 \arguments{
-\item{taxa_df}{A data frame containing taxa names to be mapped.}
+\item{taxa_df}{A data frame containing organism names.}
 
-\item{taxa_col}{The unquoted column name in \code{taxa_df} containing the
-taxa names.}
+\item{taxa_col}{An unquoted column in \code{taxa_df} containing either scientific
+names or common names. A single call cannot mix the two name types.}
+
+\item{match_by}{Character string indicating how \code{taxa_col} should be
+matched. Must be either \code{"scientific"} or \code{"common"}. The default is
+\code{"scientific"} for compatibility with earlier versions of capemlTaxa.}
+
+\item{path}{Directory in which \code{taxa_map.csv}, \code{taxa_duplicates.csv}, and
+\code{taxa_resolutions.csv} are read or written. Defaults to the current working
+directory.}
 }
 \value{
-Invisibly returns the taxa map data frame (also written to
-\code{taxa_map.csv}).
+Invisibly returns the taxa map as a data frame. The returned object
+has a \code{resolution_status} attribute containing character vectors named
+\code{unmatched}, \code{ambiguous}, and \code{resolved}. The same taxa map, without the
+attribute, is written to \code{taxa_map.csv}.
 }
 \description{
-This function takes a data frame of taxa names and joins them
-with ITIS data from a local taxadb database, producing a standardized taxa
-map suitable for downstream workflows. The function preserves input order,
-checks for duplicate matches, and writes the result to \code{taxa_map.csv}.
+Matches a column of scientific or English common names to ITIS and writes a
+standardized \code{taxa_map.csv} for use by \code{capeml}. Ambiguous matches are never
+selected automatically. Instead, candidate taxa are written to
+\code{taxa_duplicates.csv} and user selections are read from
+\code{taxa_resolutions.csv} on a subsequent call.
 }
 \details{
-The function uses helper functions to connect to the taxadb
-database, retrieve the ITIS table, and determine the correct table name. It
-uses \code{taxadb::clean_names()} to standardize input names and
-\code{dplyr} for data manipulation.
+Scientific names are standardized with \code{\link[taxadb:clean_names]{taxadb::clean_names()}}. Common
+names are matched exactly but without regard to case, and only records whose
+language is English are considered. Whitespace around common names is
+normalized, but punctuation is preserved; names such as
+\code{"Anna's Hummingbird"} are therefore passed safely and unchanged to
+\code{taxadb}.
+
+ITIS synonym records are resolved to their accepted taxon. For every matched
+or user-resolved row, \code{taxa_clean} comes from the \code{scientificName} field of
+the accepted ITIS record. This is true whether the supplied value was a
+scientific name, a scientific synonym, or a common name. \code{taxonID} and the
+remaining taxonomy fields also come from that accepted ITIS record.
+
+The literal supplied value is retained in \code{input_name}, the first column of
+\code{taxa_map.csv}. For matched common-name rows, \code{vernacularName} comes from the
+matching English ITIS common-name record, so its spelling, capitalization, and
+punctuation may differ from the supplied value. For matched scientific-name
+rows, \code{vernacularName}, when available, comes from the accepted ITIS taxon
+record. \code{input_name} is also used in \code{taxa_duplicates.csv} and
+\code{taxa_resolutions.csv}, providing a consistent link among all three files.
+
+Unmatched inputs remain in \code{taxa_map.csv} with their literal \code{input_name},
+while \code{taxa_clean}, \code{vernacularName}, and all other ITIS-derived fields are
+missing. Unresolved ambiguous inputs are excluded from the map until a valid
+selection is supplied.
+
+A candidate is unique by \code{acceptedNameUsageID}, not by the number of raw
+ITIS rows. When an input has more than one candidate, all candidates are
+written to \code{taxa_duplicates.csv}. The companion \code{taxa_resolutions.csv}
+contains one row per ambiguous input. Set \code{selected_taxonID} to one of that
+input's \code{candidate_taxonID} values and call \code{write_taxa_map()} again.
+Existing comments and valid selections are preserved. When saved selections
+are applied, the function reports each \code{input_name -> selected_taxonID}
+mapping and includes the selected taxon in \code{taxa_map.csv}. The selected row
+is also marked \code{TRUE} in \code{taxa_duplicates.csv}.
+
+If different input common names resolve to the same accepted taxon, the
+function warns, retains the first name in input order, and writes one map row
+for that taxon.
+
+The function opens one \code{taxadb} connection and registers
+\code{\link[taxadb:td_disconnect]{taxadb::td_disconnect()}} immediately so the connection is closed on both
+success and error. Disconnecting also clears \code{taxadb}'s connection cache.
 }
 \examples{
 \dontrun{
-sample_taxa <- data.frame(scientific_name = c("Homo sapiens", "Panthera"))
-write_taxa_map(sample_taxa, scientific_name)
+scientific_taxa <- data.frame(
+  name = c("Homo sapiens", "Panthera leo")
+)
+write_taxa_map(scientific_taxa, name, match_by = "scientific")
+
+common_taxa <- data.frame(
+  name = c("Anna's Hummingbird", "Redhead")
+)
+write_taxa_map(common_taxa, name, match_by = "common")
+# If Redhead is ambiguous, edit taxa_resolutions.csv and call again.
 }
 
 }

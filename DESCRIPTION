@@ -1,11 +1,11 @@
 Package: capemlTaxa
 Title: CAP EML Taxonomic Mapping Tools
-Version: 0.1.0
+Version: 0.3.0
 Authors@R: person("S", "Earl", email = "stevan.earl@asu.edu", role = c("aut", "cre"))
 Description: Optional taxonomic mapping tools for capeml. This package
   contains taxadb-based utilities for generating taxa map resources that can
   be used by capeml taxonomic coverage workflows.
-Depends: R (>= 3.4.0)
+Depends: R (>= 4.1.0)
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -13,10 +13,12 @@ Imports:
     dplyr,
     readr,
     purrr,
-    DBI,
-    glue,
+    rlang,
     taxadb
 Suggests:
+    DBI,
+    duckdb,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
+Roxygen: list(markdown = TRUE)

@@ -2,15 +2,14 @@
 % Please edit documentation in R/write_taxa_map.R
 \name{get_taxa_db}
 \alias{get_taxa_db}
-\title{Connect to a local taxadb database}
+\title{Connect to the local taxadb database}
 \usage{
 get_taxa_db()
 }
 \value{
-A DBI database connection.
+A DBI-compatible taxadb connection.
 }
 \description{
-Helper function to connect to a local taxadb database and ensure the ITIS
-schema is present.
+Connect to the local taxadb database
 }
 \keyword{internal}
